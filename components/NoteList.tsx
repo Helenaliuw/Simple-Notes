@@ -41,7 +41,10 @@ const NoteItem: React.FC<NoteItemProps> = ({
     const MAX_LENGTH = 100;
 
     const hasLongDescription = note.description && note.description.length > MAX_LENGTH;
-    const toggleExpand = () => setIsExpanded(!isExpanded);
+    const toggleExpand = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsExpanded(!isExpanded);
+    };
 
     // Edit Mode View
     if (isEditing) {
@@ -68,12 +71,14 @@ const NoteItem: React.FC<NoteItemProps> = ({
                     </div>
                     <div className="flex justify-end space-x-2 pt-2">
                         <button 
+                            type="button"
                             onClick={onCancelEdit}
                             className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded transition-colors"
                         >
                             Batal
                         </button>
                         <button 
+                            type="button"
                             onClick={() => onUpdate(note.id)}
                             className="px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded transition-colors"
                         >
@@ -101,6 +106,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
                         
                         {hasLongDescription && (
                             <button 
+                                type="button"
                                 onClick={toggleExpand}
                                 className="mt-2 text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 focus:outline-none hover:underline transition-colors"
                             >
@@ -118,20 +124,28 @@ const NoteItem: React.FC<NoteItemProps> = ({
                 
                 <div className="flex space-x-1">
                     <button 
-                        onClick={() => onEdit(note)} 
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit(note);
+                        }} 
                         className="p-1.5 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-full transition-all"
                         title="Edit Catatan"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 pointer-events-none" viewBox="0 0 20 20" fill="currentColor">
                             <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                         </svg>
                     </button>
                     <button 
-                        onClick={() => onDelete(note.id)} 
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(note.id);
+                        }} 
                         className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-full transition-all"
                         title="Hapus Catatan"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 pointer-events-none" viewBox="0 0 20 20" fill="currentColor">
                             <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
                         </svg>
                     </button>

@@ -124,6 +124,7 @@ const App: React.FC = () => {
   };
 
   const handleDelete = async (noteId: string) => {
+    console.log(noteId);
     if (window.confirm('Apakah Anda yakin ingin menghapus catatan ini?')) {
       setIsLoading(true);
       setError(null);
