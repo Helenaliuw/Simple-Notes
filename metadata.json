@@ -1,0 +1,5 @@
+{
+  "name": "Supabase Notes App",
+  "description": "A simple client-side application to create and display notes, with data stored in a Supabase cloud database.",
+  "requestFramePermissions": []
+}
