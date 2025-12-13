@@ -1,10 +1,9 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from './services/supabase';
+import { noteService } from './services/api';
 import { Note } from './types';
 import NoteForm from './components/NoteForm';
 import NoteList from './components/NoteList';
-import { PostgrestError } from '@supabase/supabase-js';
 
 const App: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -12,6 +11,7 @@ const App: React.FC = () => {
   const [description, setDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   // State for editing
@@ -22,20 +22,19 @@ const App: React.FC = () => {
   const fetchNotes = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    setServerError(false);
     try {
-      const { data, error } = await supabase
-        .from('notes')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        throw error;
-      }
+      const data = await noteService.getAll();
       setNotes(data || []);
-    } catch (err) {
-      const pgError = err as PostgrestError;
-      console.error('Error fetching notes:', pgError);
-      setError(`Gagal memuat catatan: ${pgError.message}. Pastikan setup Supabase sudah benar (lihat README.md).`);
+    } catch (err: any) {
+      console.error('Error fetching notes:', err);
+      // Check if it's a connection error (Server not running)
+      if (err.message && (err.message.includes('Failed to fetch') || err.message.includes('Network request failed'))) {
+        setServerError(true);
+        setError('Gagal menghubungi server backend. Pastikan Anda telah menjalankan "node server.js".');
+      } else {
+        setError(`Gagal memuat catatan: ${err.message}`);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -56,26 +55,13 @@ const App: React.FC = () => {
     setError(null);
 
     try {
-      const { error } = await supabase
-        .from('notes')
-        .insert([{ title, description: description || null }]);
-
-      if (error) {
-        throw error;
-      }
-
+      await noteService.create({ title, description });
       setTitle('');
       setDescription('');
       await fetchNotes(); // Refresh the list
-    } catch (err) {
-        const pgError = err as PostgrestError;
-        console.error('Error saving note:', pgError);
-        
-        if (pgError.message && pgError.message.includes('row-level security policy')) {
-            setError('Gagal menyimpan: Akses ditolak oleh database. Pastikan Anda sudah membuat Policy "INSERT" untuk role "anon" di dashboard Supabase.');
-        } else {
-            setError(`Gagal menyimpan catatan: ${pgError.message}.`);
-        }
+    } catch (err: any) {
+        console.error('Error saving note:', err);
+        setError(`Gagal menyimpan catatan: ${err.message}.`);
     } finally {
       setIsLoading(false);
     }
@@ -102,43 +88,25 @@ const App: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const { error } = await supabase
-        .from('notes')
-        .update({ title: editingTitle, description: editingDescription || null })
-        .eq('id', noteId);
-      
-      if (error) throw error;
-      
+      await noteService.update(noteId, { title: editingTitle, description: editingDescription });
       handleCancelEdit();
       await fetchNotes();
-    } catch (err) {
-      const pgError = err as PostgrestError;
-      if (pgError.message && pgError.message.includes('row-level security policy')) {
-          setError('Gagal mengupdate: Pastikan Policy "UPDATE" sudah dibuat di Supabase.');
-      } else {
-          setError(`Gagal memperbarui catatan: ${pgError.message}`);
-      }
+    } catch (err: any) {
+      setError(`Gagal memperbarui catatan: ${err.message}`);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDelete = async (noteId: string) => {
-    console.log(noteId);
     if (window.confirm('Apakah Anda yakin ingin menghapus catatan ini?')) {
       setIsLoading(true);
       setError(null);
       try {
-        const { error } = await supabase.from('notes').delete().eq('id', noteId);
-        if (error) throw error;
+        await noteService.delete(noteId);
         await fetchNotes();
-      } catch (err) {
-        const pgError = err as PostgrestError;
-        if (pgError.message && pgError.message.includes('row-level security policy')) {
-            setError('Gagal menghapus: Pastikan Policy "DELETE" sudah dibuat di Supabase.');
-        } else {
-            setError(`Gagal menghapus catatan: ${pgError.message}`);
-        }
+      } catch (err: any) {
+        setError(`Gagal menghapus catatan: ${err.message}`);
       } finally {
         setIsLoading(false);
       }
@@ -157,10 +125,22 @@ const App: React.FC = () => {
       <div className="max-w-6xl mx-auto">
         <header className="text-center mb-8">
           <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-cyan-500 py-2">
-            Simple Notes
+            Secure Notes App
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-2">Aplikasi client-server sederhana dengan React dan Supabase.</p>
+          <p className="text-gray-500 dark:text-gray-400 mt-2">
+             Arsitektur Client-Server (Proxy Backend). API Key tersembunyi di server.
+          </p>
         </header>
+
+        {serverError && (
+            <div className="bg-red-600 text-white p-4 rounded-lg shadow-lg mb-8 text-center animate-pulse">
+                <h3 className="text-xl font-bold mb-2">⚠️ Koneksi Server Terputus</h3>
+                <p>Aplikasi tidak dapat menghubungi backend.</p>
+                <p className="mt-2 text-sm bg-red-700 inline-block px-3 py-1 rounded">
+                    Jalankan perintah: <code>node server.js</code> di terminal.
+                </p>
+            </div>
+        )}
         
         <main className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           <div className="lg:pr-6">
@@ -175,7 +155,7 @@ const App: React.FC = () => {
               />
           </div>
           <div className="lg:pl-6 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-gray-700 pt-8 lg:pt-0">
-            {error && (
+            {error && !serverError && (
               <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-6" role="alert">
                 <strong className="font-bold">Error!</strong>
                 <span className="block sm:inline ml-2">{error}</span>
